@@ -892,7 +892,7 @@ loadLandMask(TEXTURE_URL)
     // Once the mask is ready, build the baseline population layer
     buildBaselinePopulation();
     // Reset the era so settler clusters can re-snap to land
-    if (typeof startEra === 'function') startEra(animState.eraIndex);
+    if (typeof startEra === 'function') startEra(animState.eraIndex, { crossfade: false });
   })
   .catch(() => {
     // Mask failed — proceed without it
@@ -1464,21 +1464,59 @@ function makeArcObject(coords, color, groupIdx, routeIdx) {
   };
 }
 
-function disposeArcsLayer() {
-  while (arcsLayer.children.length > 0) {
-    const c = arcsLayer.children.pop();
-    if (c.geometry) c.geometry.dispose();
-    if (c.material) c.material.dispose();
-  }
+function disposeArcsByList(list) {
+  list.forEach(a => {
+    // Dispose all geometry and materials owned by this arc
+    [a.line, a.school, a.homeCluster.mesh, a.finalSettlers, a.hit].forEach(obj => {
+      if (obj) {
+        if (obj.geometry) obj.geometry.dispose();
+        if (obj.material) obj.material.dispose();
+        if (obj.parent) obj.parent.remove(obj);
+      }
+    });
+    a.settlerClusters.forEach(sc => {
+      if (sc.geo) sc.geo.dispose();
+      if (sc.mat) sc.mat.dispose();
+      if (sc.mesh && sc.mesh.parent) sc.mesh.parent.remove(sc.mesh);
+    });
+  });
 }
 
-function startEra(idx) {
+// Outgoing arcs from the previous era, fading out
+let outgoingArcObjects = [];
+const CROSSFADE_DURATION = 2200; // ms — outgoing fade-out and incoming fade-in
+
+function startEra(idx, opts = {}) {
+  const { crossfade = true, fromDirectionToggle = false } = opts;
+
+  // Hand the current arcs off to the outgoing list so they keep rendering and fade out
+  if (crossfade && arcObjects.length > 0 && !fromDirectionToggle) {
+    arcObjects.forEach(a => {
+      a.fadingOut = true;
+      a.fadeStart = performance.now();
+      // Freeze the head where it was so dots don't keep advancing during fade
+      a.frozenHead = a.lastHead != null ? a.lastHead : 0;
+    });
+    // If there's already an outgoing batch fading, dispose it immediately —
+    // we don't want a long tail of stacking ghost-eras during rapid changes.
+    if (outgoingArcObjects.length > 0) {
+      disposeArcsByList(outgoingArcObjects);
+    }
+    outgoingArcObjects = arcObjects.slice();
+  } else {
+    // No crossfade: dispose immediately (used by direction toggle and initial load)
+    disposeArcsByList(arcObjects);
+    if (outgoingArcObjects.length > 0) {
+      disposeArcsByList(outgoingArcObjects);
+      outgoingArcObjects = [];
+    }
+  }
+
+  arcObjects = [];
+
   animState.eraIndex = idx;
   animState.startTime = performance.now();
   animState.pauseAccum = 0;
-
-  disposeArcsLayer();
-  arcObjects = [];
 
   const era = ERAS[idx];
   document.getElementById('era-period').textContent = era.period;
@@ -1492,7 +1530,14 @@ function startEra(idx) {
 
   era.groups.forEach((group, gi) => {
     group.routes.forEach((route, ri) => {
-      arcObjects.push(makeArcObject(route, group.color, gi, ri));
+      const arc = makeArcObject(route, group.color, gi, ri);
+      // Start with global opacity 0 if crossfading, jumps from 0 → 1 over CROSSFADE_DURATION
+      arc.globalOpacity = crossfade ? 0 : 1;
+      arc.fadingIn = crossfade;
+      arc.fadeStart = performance.now();
+      arc.fadingOut = false;
+      arc.lastHead = 0;
+      arcObjects.push(arc);
     });
   });
 
@@ -1653,21 +1698,47 @@ function tick(now) {
   }
   document.getElementById('year-now').textContent = formatYear(displayYear);
 
-  arcObjects.forEach(a => {
+  // Helper to update one arc (used for both incoming and outgoing)
+  function updateArc(a) {
     const arcDuration = era.duration * 0.7;
     let head;
-    if (focusedGroupId !== null && a.groupId === focusedGroupId) {
-      const cycleDur = arcDuration * 0.9;
-      const cycleT = ((now - a.delay * 0.3) % (cycleDur + 1000)) / cycleDur;
-      head = Math.min(1, Math.max(0, cycleT));
+
+    // Compute globalOpacity for this arc (1 = fully visible, 0 = invisible)
+    if (a.fadingOut) {
+      const fadeT = Math.min(1, (now - a.fadeStart) / CROSSFADE_DURATION);
+      a.globalOpacity = 1 - fadeT;
+      head = a.frozenHead != null ? a.frozenHead : (a.lastHead || 0);
+    } else if (a.fadingIn) {
+      const fadeT = Math.min(1, (now - a.fadeStart) / CROSSFADE_DURATION);
+      a.globalOpacity = fadeT;
+      if (fadeT >= 1) a.fadingIn = false;
+      // Compute head normally
+      if (focusedGroupId !== null && a.groupId === focusedGroupId) {
+        const cycleDur = arcDuration * 0.9;
+        const cycleT = ((now - a.delay * 0.3) % (cycleDur + 1000)) / cycleDur;
+        head = Math.min(1, Math.max(0, cycleT));
+      } else {
+        const localElapsed = elapsed - a.delay;
+        head = Math.max(0, Math.min(1, localElapsed / arcDuration));
+      }
     } else {
-      const localElapsed = elapsed - a.delay;
-      head = Math.max(0, Math.min(1, localElapsed / arcDuration));
+      a.globalOpacity = a.globalOpacity != null ? a.globalOpacity : 1;
+      if (focusedGroupId !== null && a.groupId === focusedGroupId) {
+        const cycleDur = arcDuration * 0.9;
+        const cycleT = ((now - a.delay * 0.3) % (cycleDur + 1000)) / cycleDur;
+        head = Math.min(1, Math.max(0, cycleT));
+      } else {
+        const localElapsed = elapsed - a.delay;
+        head = Math.max(0, Math.min(1, localElapsed / arcDuration));
+      }
     }
+
+    a.lastHead = head;
+    const G = a.globalOpacity;
 
     // Trail
     const opacities = a.lineGeo.attributes.aOpacity.array;
-    const targetMax = a.fullOpacity;
+    const targetMax = a.fullOpacity * G;
     for (let i = 0; i < a.total; i++) {
       const segT = i / (a.total - 1);
       let alpha = 0;
@@ -1686,9 +1757,8 @@ function tick(now) {
     // Tiny flock dots
     const schoolPos = a.schoolGeo.attributes.position.array;
     const schoolOps = a.schoolGeo.attributes.aOpacity.array;
-    const dotOpacityBase = 0.65;
-    let leadPoint = null;
-    const tSec = now * 0.001; // seconds
+    const dotOpacityBase = 0.65 * G;
+    const tSec = now * 0.001;
 
     for (let d = 0; d < a.schoolCount; d++) {
       const dotHead = head + a.dotOffsets[d];
@@ -1715,14 +1785,18 @@ function tick(now) {
       tx /= tlen; ty /= tlen; tz /= tlen;
       const bx = uy*tz - uz*ty, by = uz*tx - ux*tz, bz = ux*ty - uy*tx;
 
-      // Calm cohesive drift: each dot has a fixed perpendicular bias (its lane in the swarm)
-      // plus a single slow oscillation. The flock holds shape and breathes gently.
-      const phaseA = a.dotPhaseA[d] + tSec * a.dotFreqA[d];
-      const ampA = a.dotAmpA[d];
-      const bias = a.dotBias[d];
-
-      const jx = bias + Math.cos(phaseA) * ampA;
-      const jy = Math.sin(phaseA) * ampA;
+      // Skip jitter for outgoing arcs (frozen)
+      let jx, jy;
+      if (a.fadingOut) {
+        jx = a.dotBias[d];
+        jy = 0;
+      } else {
+        const phaseA = a.dotPhaseA[d] + tSec * a.dotFreqA[d];
+        const ampA = a.dotAmpA[d];
+        const bias = a.dotBias[d];
+        jx = bias + Math.cos(phaseA) * ampA;
+        jy = Math.sin(phaseA) * ampA;
+      }
 
       const fx = px + tx*jx + bx*jy;
       const fy = py + ty*jx + by*jy;
@@ -1737,24 +1811,24 @@ function tick(now) {
       if (dotHead < 0.05) opacity *= dotHead / 0.05;
       if (dotHead > 0.95) opacity *= (1 - dotHead) / 0.05;
       schoolOps[d] = opacity;
-      if (d === 0) leadPoint = { x: schoolPos[0], y: schoolPos[1], z: schoolPos[2] };
     }
     a.schoolGeo.attributes.position.needsUpdate = true;
     a.schoolGeo.attributes.aOpacity.needsUpdate = true;
 
-    // Hit target uses the deterministic head position on the route
-    // (not jittery dot 0) so clicks always land on the swarm front.
-    if (head > 0 && head < 1) {
+    // Hit target — only enable for incoming/active arcs
+    if (head > 0 && head < 1 && !a.fadingOut) {
       const hIdx = Math.min(a.total - 1, Math.floor(head * (a.total - 1)));
       const hPt = a.points[hIdx];
       a.hit.position.copy(hPt).multiplyScalar(1.005);
+      a.hit.visible = true;
+    } else if (a.fadingOut) {
+      a.hit.visible = false;
     }
 
-    // HOME cluster — visible from the start of the era (resident population)
+    // HOME cluster
     {
-      const target = 0.55;
+      const target = 0.55 * G;
       const hOps = a.homeCluster.geo.attributes.aOpacity.array;
-      // Smooth fade toward target each frame
       for (let i = 0; i < a.homeCluster.count; i++) {
         const cur = hOps[i];
         hOps[i] = cur + (target - cur) * 0.08;
@@ -1764,25 +1838,42 @@ function tick(now) {
 
     // Settlers at intermediate waypoints
     a.settlerClusters.forEach(sc => {
-      if (!sc.activated && head >= sc.triggerHead) {
+      if (!sc.activated && head >= sc.triggerHead && !a.fadingOut) {
         sc.activated = true;
         sc.activationTime = now;
       }
       if (sc.activated) {
         const t = Math.min(1, (now - sc.activationTime) / 1200);
-        const target = 0.65;
+        const target = 0.65 * G;
         const sOps = sc.geo.attributes.aOpacity.array;
-        for (let i = 0; i < sc.count; i++) sOps[i] = t * target;
+        // For outgoing arcs, smoothly fade toward target instead of locking at full
+        if (a.fadingOut) {
+          for (let i = 0; i < sc.count; i++) {
+            const cur = sOps[i];
+            sOps[i] = cur + (target - cur) * 0.08;
+          }
+        } else {
+          for (let i = 0; i < sc.count; i++) sOps[i] = t * target;
+        }
         sc.geo.attributes.aOpacity.needsUpdate = true;
       }
     });
 
     // Final destination settlers
-    if (head >= 0.92) {
+    if (head >= 0.92 && !a.fadingOut) {
       const fOps = a.fGeo.attributes.aOpacity.array;
-      const target = 0.70;
+      const target = 0.70 * G;
       for (let i = 0; i < a.finalSettlerCount; i++) {
         fOps[i] = Math.min(target, fOps[i] + 0.015);
+      }
+      a.fGeo.attributes.aOpacity.needsUpdate = true;
+    } else if (a.fadingOut) {
+      // For outgoing arcs, just decay final-cluster opacity smoothly toward 0.70 * G
+      const fOps = a.fGeo.attributes.aOpacity.array;
+      const target = 0.70 * G;
+      for (let i = 0; i < a.finalSettlerCount; i++) {
+        const cur = fOps[i];
+        fOps[i] = cur + (target - cur) * 0.08;
       }
       a.fGeo.attributes.aOpacity.needsUpdate = true;
     } else if (focusedGroupId !== null && a.groupId === focusedGroupId && head < 0.05) {
@@ -1797,7 +1888,22 @@ function tick(now) {
         sc.geo.attributes.aOpacity.needsUpdate = true;
       });
     }
-  });
+  }
+
+  arcObjects.forEach(updateArc);
+  outgoingArcObjects.forEach(updateArc);
+
+  // Dispose outgoing arcs that have finished fading
+  if (outgoingArcObjects.length > 0) {
+    const stillFading = [];
+    const done = [];
+    outgoingArcObjects.forEach(a => {
+      if (a.globalOpacity <= 0.01) done.push(a);
+      else stillFading.push(a);
+    });
+    if (done.length > 0) disposeArcsByList(done);
+    outgoingArcObjects = stillFading;
+  }
 
   if (elapsed >= era.duration && focusedGroupId === null) nextEra();
 
@@ -1842,7 +1948,7 @@ function setDirection(mode) {
   document.getElementById('dir-reverse').classList.toggle('active', mode === 'reverse');
   // Reset to era 0 of the chosen direction
   focusedGroupId = null;
-  startEra(0);
+  startEra(0, { fromDirectionToggle: true });
 }
 document.getElementById('dir-forward').addEventListener('click', () => setDirection('forward'));
 document.getElementById('dir-reverse').addEventListener('click', () => setDirection('reverse'));
@@ -1865,7 +1971,7 @@ window.addEventListener('resize', () => {
   renderer.setSize(W(), H());
 });
 
-startEra(0);
+startEra(0, { crossfade: false });
 requestAnimationFrame(tick);
 </script>
 </body>
