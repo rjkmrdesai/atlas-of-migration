@@ -1,0 +1,1872 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Atlas of Human Migration</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500&family=IBM+Plex+Mono:wght@300;400;500&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #05070b;
+    --ink: #e8e4d8;
+    --ink-soft: #a8a496;
+    --ink-faint: #5a584f;
+    --accent: #c8a165;
+    --rule: rgba(232, 228, 216, 0.08);
+    --rule-strong: rgba(232, 228, 216, 0.18);
+    --serif: 'Cormorant Garamond', 'Times New Roman', serif;
+    --mono: 'IBM Plex Mono', 'Courier New', monospace;
+    --sans: 'Inter', -apple-system, sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    background: var(--bg); color: var(--ink); font-family: var(--sans);
+    height: 100%; width: 100%; overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+  body {
+    background: radial-gradient(ellipse at 50% 50%, #0a0e16 0%, #05070b 70%, #02030500 100%);
+    position: relative;
+  }
+  .stars {
+    position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background-image:
+      radial-gradient(1px 1px at 12% 18%, rgba(255,255,255,0.6) 0, transparent 50%),
+      radial-gradient(1px 1px at 28% 72%, rgba(255,255,255,0.4) 0, transparent 50%),
+      radial-gradient(1.5px 1.5px at 47% 28%, rgba(255,255,255,0.7) 0, transparent 50%),
+      radial-gradient(1px 1px at 65% 88%, rgba(255,255,255,0.5) 0, transparent 50%),
+      radial-gradient(1px 1px at 78% 12%, rgba(255,255,255,0.5) 0, transparent 50%),
+      radial-gradient(1.5px 1.5px at 91% 56%, rgba(255,255,255,0.6) 0, transparent 50%),
+      radial-gradient(1px 1px at 8% 94%, rgba(255,255,255,0.4) 0, transparent 50%),
+      radial-gradient(1px 1px at 35% 8%, rgba(255,255,255,0.5) 0, transparent 50%),
+      radial-gradient(1px 1px at 55% 64%, rgba(255,255,255,0.3) 0, transparent 50%),
+      radial-gradient(1px 1px at 82% 78%, rgba(255,255,255,0.5) 0, transparent 50%);
+  }
+  .grain {
+    position: fixed; inset: 0; pointer-events: none;
+    opacity: 0.025; mix-blend-mode: overlay; z-index: 100;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  }
+  #globe-container { position: fixed; inset: 0; z-index: 1; cursor: grab; }
+  #globe-container.grabbing { cursor: grabbing; }
+  #globe-container.hovering { cursor: pointer; }
+
+  header {
+    position: fixed; top: 0; left: 0; right: 0;
+    padding: 28px 40px 0;
+    display: flex; justify-content: space-between; align-items: flex-start;
+    z-index: 10; pointer-events: none;
+  }
+  header > * { pointer-events: auto; }
+  .brand { display: flex; flex-direction: column; gap: 4px; }
+  .brand-mark {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.3em;
+    color: var(--ink-faint); text-transform: uppercase;
+  }
+  .brand-title {
+    font-family: var(--serif); font-size: 26px; font-weight: 400;
+    letter-spacing: 0.01em; color: var(--ink);
+  }
+  .brand-title em { font-style: italic; color: var(--accent); font-weight: 300; }
+  .meta {
+    text-align: right; font-family: var(--mono); font-size: 10px;
+    letter-spacing: 0.2em; color: var(--ink-faint); text-transform: uppercase;
+    line-height: 1.8;
+  }
+
+  .topright-stack {
+    position: fixed; top: 28px; right: 40px; z-index: 11;
+    display: flex; flex-direction: column; align-items: flex-end; gap: 14px;
+    pointer-events: none;
+  }
+  .topright-stack > * { pointer-events: auto; }
+
+  .direction-toggle {
+    display: flex;
+    background: rgba(5, 7, 11, 0.6);
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    border: 0.5px solid var(--rule);
+    margin-top: 70px;
+  }
+  .direction-toggle button {
+    background: transparent; border: none;
+    color: var(--ink-faint);
+    font-family: var(--mono); font-size: 9px; letter-spacing: 0.25em;
+    text-transform: uppercase; padding: 9px 14px;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .direction-toggle button.active {
+    color: var(--accent);
+    background: rgba(200, 161, 101, 0.06);
+  }
+  .direction-toggle button:hover:not(.active) { color: var(--ink-soft); }
+  .direction-toggle button + button { border-left: 0.5px solid var(--rule); }
+
+  .credits-toggle {
+    background: transparent; border: none; color: var(--ink-faint);
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.3em;
+    text-transform: uppercase; cursor: pointer; padding: 4px 0;
+  }
+  .credits-toggle:hover { color: var(--accent); }
+  .credits-panel {
+    background: rgba(5, 7, 11, 0.95);
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    border: 0.5px solid var(--rule); padding: 22px 26px; width: 360px;
+    font-family: var(--sans); font-size: 12px; font-weight: 300;
+    color: var(--ink-soft); line-height: 1.7;
+    opacity: 0; visibility: hidden; transform: translateY(-4px);
+    transition: opacity 0.2s, visibility 0.2s, transform 0.2s;
+    margin-top: 8px;
+    max-height: 70vh; overflow-y: auto;
+  }
+  .credits-panel.open { opacity: 1; visibility: visible; transform: translateY(0); }
+  .credits-panel h4 {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.25em;
+    color: var(--accent); text-transform: uppercase; font-weight: 400; margin-bottom: 8px;
+  }
+  .credits-panel h4:not(:first-child) { margin-top: 14px; }
+  .credits-panel p { margin-bottom: 10px; }
+  .credits-panel p:last-child { margin-bottom: 0; }
+  .credits-panel ul { list-style: none; padding: 0; margin: 0 0 10px; }
+  .credits-panel li { padding: 3px 0; font-size: 11px; }
+  .credits-panel li::before { content: '— '; color: var(--ink-faint); }
+
+  .era-card {
+    position: fixed;
+    left: 32px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(5, 7, 11, 0.78);
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    border: 0.5px solid var(--rule);
+    padding: 22px 26px;
+    width: 360px;
+    max-height: 70vh;
+    overflow-y: auto;
+    z-index: 10;
+  }
+  .era-row {
+    display: flex; justify-content: space-between; align-items: baseline;
+    gap: 20px; margin-bottom: 8px;
+  }
+  .era-period {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.3em;
+    color: var(--accent); text-transform: uppercase;
+  }
+  .era-counter {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.2em;
+    color: var(--ink-faint);
+  }
+  .era-name {
+    font-family: var(--serif); font-size: 28px; font-weight: 300;
+    letter-spacing: 0.01em; line-height: 1.2; color: var(--ink); margin-bottom: 4px;
+  }
+  .era-name em { font-style: italic; color: var(--accent); }
+  .year-row {
+    display: flex; align-items: baseline; gap: 12px;
+    margin-bottom: 8px; font-family: var(--mono); color: var(--ink-soft);
+  }
+  .year-now {
+    font-size: 18px; font-weight: 400; letter-spacing: 0.08em;
+    color: var(--accent); min-width: 130px;
+    font-variant-numeric: tabular-nums;
+  }
+  .year-label {
+    font-size: 9px; letter-spacing: 0.3em;
+    color: var(--ink-faint); text-transform: uppercase;
+  }
+  .era-desc {
+    font-family: var(--sans); font-size: 12px; font-weight: 300;
+    color: var(--ink-soft); line-height: 1.6; letter-spacing: 0.01em;
+  }
+  .era-progress {
+    margin-top: 14px; height: 1px; background: var(--rule);
+    position: relative; overflow: hidden;
+  }
+  .era-progress-fill {
+    position: absolute; top: 0; height: 100%;
+    background: var(--accent); width: 0%;
+    transition: width 0.1s linear;
+  }
+  .focus-banner {
+    display: none; align-items: center; gap: 10px;
+    margin-top: 12px; padding-top: 12px;
+    border-top: 0.5px dashed var(--rule-strong);
+  }
+  .focus-banner.visible { display: flex; }
+  .focus-banner .focus-dot { width: 8px; height: 8px; border-radius: 50%; }
+  .focus-banner .focus-name {
+    font-family: var(--sans); font-size: 12px;
+    color: var(--ink); font-weight: 400; flex: 1;
+  }
+  .focus-banner .focus-clear {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.2em;
+    color: var(--ink-faint); cursor: pointer;
+    background: transparent; border: 0.5px solid var(--rule);
+    padding: 6px 12px; text-transform: uppercase; transition: all 0.2s;
+  }
+  .focus-banner .focus-clear:hover { border-color: var(--accent); color: var(--accent); }
+
+  .legend {
+    position: fixed; left: 32px; bottom: 32px;
+    z-index: 10;
+    display: flex; flex-direction: column; gap: 4px;
+    max-width: 360px;
+    background: rgba(5, 7, 11, 0.78);
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    border: 0.5px solid var(--rule);
+    padding: 16px 22px;
+    width: 360px;
+  }
+  .legend-title {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.25em;
+    color: var(--ink-faint); text-transform: uppercase; margin-bottom: 6px;
+  }
+  .legend-item {
+    display: flex; align-items: center; gap: 10px;
+    font-family: var(--sans); font-size: 11px; font-weight: 300;
+    color: var(--ink-soft); transition: color 0.2s, opacity 0.2s;
+    cursor: pointer; padding: 4px 6px; margin-left: -6px;
+  }
+  .legend-item:hover { color: var(--ink); }
+  .legend-item.dim { opacity: 0.3; }
+  .legend-item.active { color: var(--ink); }
+  .legend-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .controls {
+    position: fixed; bottom: 32px; left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+    display: flex; flex-direction: row; gap: 8px;
+  }
+  .ctrl-btn {
+    background: rgba(5, 7, 11, 0.6);
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    border: 0.5px solid var(--rule); color: var(--ink-soft);
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.25em;
+    text-transform: uppercase; padding: 10px 14px;
+    cursor: pointer; transition: all 0.2s;
+    text-align: left;
+  }
+  .ctrl-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .ctrl-btn .key {
+    color: var(--ink-faint); margin-right: 8px;
+    display: inline-block; min-width: 36px;
+  }
+
+  .hint {
+    position: fixed; bottom: 36px; right: 32px; z-index: 9;
+    font-family: var(--mono); font-size: 9px; letter-spacing: 0.2em;
+    color: var(--ink-faint); text-transform: uppercase;
+    text-align: right; line-height: 1.8; opacity: 0.6;
+  }
+
+  .loading {
+    position: fixed; inset: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    background: var(--bg); z-index: 200;
+    transition: opacity 0.8s 0.4s, visibility 0.8s 0.4s;
+    gap: 16px;
+  }
+  .loading.hidden { opacity: 0; visibility: hidden; }
+  .loading-text {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.4em;
+    color: var(--ink-faint); text-transform: uppercase;
+  }
+  .loading-bar {
+    width: 200px; height: 1px; background: var(--rule);
+    position: relative; overflow: hidden;
+  }
+  .loading-bar::after {
+    content: ''; position: absolute; inset: 0;
+    background: var(--accent); transform: translateX(-100%);
+    animation: load 1.6s ease-in-out infinite;
+  }
+  @keyframes load {
+    0%   { transform: translateX(-100%); }
+    50%  { transform: translateX(0%); }
+    100% { transform: translateX(100%); }
+  }
+
+  .tooltip {
+    position: fixed; pointer-events: none;
+    background: rgba(5, 7, 11, 0.92);
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    border: 0.5px solid var(--rule-strong); padding: 8px 12px;
+    font-family: var(--sans); font-size: 11px; color: var(--ink);
+    z-index: 50; opacity: 0; transition: opacity 0.15s;
+    transform: translate(12px, -50%); white-space: nowrap;
+  }
+  .tooltip.visible { opacity: 1; }
+  .tooltip-name { color: var(--ink); font-weight: 400; }
+  .tooltip-hint {
+    color: var(--ink-faint); font-family: var(--mono);
+    font-size: 9px; letter-spacing: 0.2em;
+    text-transform: uppercase; margin-top: 2px;
+  }
+
+  @media (max-width: 900px) {
+    header { padding: 16px 16px 0; }
+    .brand-title { font-size: 18px; }
+    .meta { display: none; }
+    .topright-stack { top: 60px; right: 16px; }
+    .direction-toggle { margin-top: 0; }
+    .credits-panel { width: calc(100vw - 32px); max-width: 360px; }
+    .era-card {
+      width: calc(100% - 24px);
+      left: 12px; right: 12px; top: auto;
+      bottom: 80px; transform: none;
+      padding: 14px 18px;
+      max-height: 40vh;
+    }
+    .era-name { font-size: 20px; }
+    .legend { display: none; }
+    .controls { left: 50%; bottom: 16px; }
+    .hint { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="stars"></div>
+<div class="grain"></div>
+
+<div class="loading" id="loading">
+  <div class="loading-text">— Charting the world —</div>
+  <div class="loading-bar"></div>
+</div>
+
+<div id="globe-container"></div>
+
+<header>
+  <div class="brand">
+    <div class="brand-mark">Vol. I — A Living Archive</div>
+    <h1 class="brand-title">Atlas of Human <em>Migration</em></h1>
+  </div>
+  <div class="meta">
+    Six continents<br>
+    Seventy thousand years<br>
+    One species in motion
+  </div>
+</header>
+
+<div class="topright-stack">
+  <button class="credits-toggle" id="credits-toggle">About / Sources ↗</button>
+  <div class="credits-panel" id="credits-panel">
+    <h4>A note on terminology</h4>
+    <p>This atlas traces documented <em>population movements</em> — peoples, language families, and ancestral groups — rather than discrete biological races. Modern genetics shows human variation is gradual and overlapping; the historical "race / subrace" model has been retired by anthropology.</p>
+    <h4>Direction of time</h4>
+    <p><em>Forward</em> follows time as it unfolded — out of Africa, then onward to today. <em>Reverse</em> rewinds from the present back to the first long walk, tracing each modern population to its source.</p>
+    <h4>Sources consulted</h4>
+    <ul>
+      <li>Bradshaw Foundation — Journey of Mankind (Oppenheimer, 2003)</li>
+      <li>Reich Lab — Allen Ancient DNA Resource (AADR v54.1)</li>
+      <li>Lazaridis et al., <em>The Genetic Origin of the Indo-Europeans</em> (2024)</li>
+      <li>Oxford Big Data Institute — Unified Genealogy of Modern and Ancient Genomes (Wohns et al., 2022)</li>
+      <li>Reich, <em>Who We Are and How We Got Here</em> (2018)</li>
+      <li>Manning, <em>Migration in World History</em> (2nd ed., 2013)</li>
+      <li>Royal Society — <em>Beringia and the peopling of the Western Hemisphere</em> (2023)</li>
+    </ul>
+    <h4>Globe</h4>
+    <p>Earth texture: NASA Visible Earth (Blue Marble). Rendered with Three.js. No political borders shown — only the shape of the land.</p>
+  </div>
+  <div class="direction-toggle">
+    <button id="dir-forward" class="active">Forward</button>
+    <button id="dir-reverse">Reverse</button>
+  </div>
+</div>
+
+<div class="legend" id="legend">
+  <div class="legend-title">Peoples in transit</div>
+</div>
+
+<div class="controls">
+  <button class="ctrl-btn" id="btn-pause"><span class="key">Space</span>Pause</button>
+  <button class="ctrl-btn" id="btn-prev"><span class="key">←</span>Previous</button>
+  <button class="ctrl-btn" id="btn-next"><span class="key">→</span>Next era</button>
+</div>
+
+<div class="hint">
+  Drag to rotate · Scroll to zoom<br>
+  Click a flock to follow
+</div>
+
+<div class="era-card">
+  <div class="era-row">
+    <div class="era-period" id="era-period">— —</div>
+    <div class="era-counter" id="era-counter">00 / 00</div>
+  </div>
+  <h2 class="era-name" id="era-name">—</h2>
+  <div class="year-row">
+    <div class="year-now" id="year-now">—</div>
+    <div class="year-label">Year on the move</div>
+  </div>
+  <p class="era-desc" id="era-desc">—</p>
+  <div class="era-progress"><div class="era-progress-fill" id="era-progress"></div></div>
+  <div class="focus-banner" id="focus-banner">
+    <span class="focus-dot" id="focus-dot"></span>
+    <span class="focus-name" id="focus-name"></span>
+    <button class="focus-clear" id="focus-clear">Clear ✕</button>
+  </div>
+</div>
+
+<div class="tooltip" id="tooltip">
+  <div class="tooltip-name" id="tooltip-name"></div>
+  <div class="tooltip-hint">Click to follow</div>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+// ============================================================
+// ERAS — dates and routes verified against Reich Lab AADR,
+// Lazaridis et al. 2024, Bradshaw Foundation, Oxford BDI
+// Unified Genealogy, and Royal Society (2023). Routes are
+// stylized composites; each era's start/end follows current
+// peer-reviewed consensus.
+// ============================================================
+const ERAS_FORWARD = [
+  {
+    period: "70,000 – 50,000 BP",
+    name: "Out of Africa",
+    yearStart: -68000, yearEnd: -50000,
+    desc: "A single founder population — perhaps a few hundred — leaves East Africa via the southern coastal route across Bab-el-Mandeb. Every non-African alive today descends from this exodus.",
+    duration: 14000,
+    groups: [
+      { name: "Southern coastal exodus", color: 0xe8c074,
+        story: "Around 65,000 years ago, a small group crossed the narrow Bab-el-Mandeb strait at the Red Sea's southern tip into Arabia. Genetic evidence (Macaulay et al. 2005, Oppenheimer 2003) supports a single successful exodus rather than multiple waves.",
+        routes: [ [[38,12],[42,14],[48,16],[54,18],[58,22]] ]
+      },
+      { name: "Levantine pioneers", color: 0xd4a574,
+        story: "A smaller group moved north through the Sinai into the Levant. Skhul and Qafzeh remains in modern Israel (~100,000 BP) show earlier sapiens presence here, but this lineage did not survive — only the southern exodus seeded the global population.",
+        routes: [ [[38,12],[36,18],[35,26],[35,32]] ]
+      },
+      { name: "Khoisan ancestors", color: 0x9cb380,
+        story: "While most humans were leaving Africa, the ancestors of the Khoisan — the most genetically diverse human population on Earth — moved southward through the Kalahari toward the Cape. Their lineage diverged from all others ~200,000 years ago.",
+        routes: [ [[28,-4],[24,-12],[22,-20],[22,-28]] ]
+      }
+    ]
+  },
+  {
+    period: "50,000 – 30,000 BP",
+    name: "The Great Coastal Sweep",
+    yearStart: -50000, yearEnd: -30000,
+    desc: "Beachcombing along the Indian Ocean rim, populations reach South Asia, the Sunda shelf, and Sahul. Cro-Magnons enter Europe and meet the Neanderthals.",
+    duration: 14000,
+    groups: [
+      { name: "Coastal South Asians", color: 0xc87b5c,
+        story: "A coastal highway of mangroves and reefs allowed rapid movement along the Indian Ocean rim. By ~50,000 BP, descendants reached Sri Lanka, the Andamans, and the now-submerged Sunda shelf of Southeast Asia.",
+        routes: [ [[58,22],[68,22],[78,18],[88,15],[96,12],[104,8],[112,4],[120,2]] ]
+      },
+      { name: "First Australians", color: 0xb8865c,
+        story: "Crossing 90 km of open ocean — the first deliberate sea voyage in human history — sapiens reached Sahul (the joined landmass of Australia + New Guinea) by ~50,000 BP. Madjedbebe rock shelter in northern Australia confirms human presence by 65,000 BP.",
+        routes: [ [[120,2],[128,-4],[136,-12],[140,-20],[144,-28]] ]
+      },
+      { name: "Cro-Magnon Europeans", color: 0xd4a574,
+        story: "Modern humans entered Europe via Anatolia and the Balkans ~45,000 BP. They coexisted with Neanderthals for roughly 5,000–8,000 years, with documented interbreeding (1–2% Neanderthal ancestry survives in non-Africans today).",
+        routes: [ [[35,32],[28,38],[18,42],[8,45],[2,48]] ]
+      },
+      { name: "Ancient North Eurasians", color: 0xa89060,
+        story: "Tracking mammoth across the open steppe, this population spread from the Caspian into Siberia. The Mal'ta boy (~24,000 BP) represents this lineage, which contributes ~30% ancestry to modern Native Americans.",
+        routes: [ [[55,40],[68,46],[82,52],[98,58],[112,60]] ]
+      }
+    ]
+  },
+  {
+    period: "30,000 – 16,000 BP",
+    name: "Last Glacial Maximum",
+    yearStart: -26500, yearEnd: -19000,
+    desc: "Ice locks Europe and Siberia. Populations contract into Iberian, Italian, and Beringian refugia. The first Americans wait on the land bridge.",
+    duration: 13000,
+    groups: [
+      { name: "Iberian refugium", color: 0xc89060,
+        story: "As ice sheets advanced, European hunter-gatherers retreated to warmer pockets in southern Iberia, Italy, and the Balkans. The Solutrean and Magdalenian cultures emerged from these refugia and would later re-expand once the climate warmed.",
+        routes: [ [[2,48],[-3,44],[-5,40],[-2,38]] ]
+      },
+      { name: "Beringian standstill", color: 0x7da3b3,
+        story: "On Beringia, the now-submerged land bridge between Siberia and Alaska, a small population sat genetically isolated for ~8,000 years (the 'Beringian Standstill', ~25,000–16,000 BP). This isolation produced the founding lineages of every Indigenous American.",
+        routes: [ [[110,55],[130,60],[155,64],[175,65],[-170,64]] ]
+      },
+      { name: "East Asian diversification", color: 0xb08c70,
+        story: "While Beringia waited, the broader East Asian population diversified across northern China and the Amur basin — the ancestral pool that would give rise to Han Chinese, Koreans, Japanese, and Mongolic peoples.",
+        routes: [ [[100,40],[112,38],[124,36],[136,34]] ]
+      }
+    ]
+  },
+  {
+    period: "16,000 – 8,000 BP",
+    name: "Peopling of the Americas",
+    yearStart: -16000, yearEnd: -8000,
+    desc: "Ice retreats. Beringians sweep south by inland and Pacific coastal routes, reaching Tierra del Fuego within three millennia — the longest migration in human history.",
+    duration: 14000,
+    groups: [
+      { name: "Paleo-Indians (inland)", color: 0xd49060,
+        story: "Around 16,000 BP, descendants of the Beringian standstill moved south through an ice-free corridor east of the Rockies. Within 3,000 years, their descendants stood at the southern tip of South America. Monte Verde, Chile (~14,500 BP) is the oldest confirmed site.",
+        routes: [ [[-150,62],[-135,55],[-115,42],[-100,28],[-85,12],[-72,-4],[-65,-22],[-68,-42],[-70,-52]] ]
+      },
+      { name: "Pacific coastal route", color: 0x9cb3c0,
+        story: "A second migration hugged the Pacific coastline by boat, exploiting kelp forests and tidal pools. The 'kelp highway' hypothesis (Erlandson et al.) is supported by Monte Verde's coastal age and by Y-chromosome haplogroup distributions.",
+        routes: [ [[-140,58],[-128,48],[-118,38],[-108,28],[-92,14],[-82,4]] ]
+      },
+      { name: "Anatolian farmers", color: 0xc8a165,
+        story: "From the Fertile Crescent, the world's first farmers carried wheat, barley, sheep, and goats outward beginning ~8,500 BP. They contributed ~30–60% of ancestry to modern Europeans, replacing or absorbing Mesolithic hunter-gatherers.",
+        routes: [
+          [[35,38],[26,40],[16,43],[6,46],[-2,48],[-4,52]],
+          [[35,38],[42,42],[52,48],[58,54]]
+        ]
+      }
+    ]
+  },
+  {
+    period: "5,000 – 1,000 BCE",
+    name: "Neolithic Expansions",
+    yearStart: -5000, yearEnd: -1000,
+    desc: "Bantu speakers leave the Cameroon-Nigeria highlands; Yamnaya pastoralists pour off the Pontic-Caspian steppe into Europe and South Asia; Austronesians launch the greatest sea voyage in prehistory.",
+    duration: 14000,
+    groups: [
+      { name: "Bantu farmers", color: 0x9cb380,
+        story: "From the Cameroon-Nigeria border, Bantu-speaking farmers expanded south and east beginning ~3,000 BCE, carrying iron tools, yams, and a language family now spoken by 350 million people. They reached southern Africa by ~300 CE.",
+        routes: [
+          [[12,8],[18,2],[22,-6],[26,-14],[28,-22],[28,-30]],
+          [[12,8],[22,4],[30,0],[36,-4],[38,-8]]
+        ]
+      },
+      { name: "Austronesians from Taiwan", color: 0x7db3a3,
+        story: "Beginning ~3,000 BCE from eastern Taiwan, Austronesian-speaking voyagers spread south through the Philippines into Island Southeast Asia. By 1,200 BCE the Lapita culture had reached the Bismarcks and would continue into remote Oceania.",
+        routes: [
+          [[121,23],[122,18],[121,12],[120,5],[116,-2],[125,-5],[150,-6],[160,-8]],
+          [[121,23],[110,4],[95,-2],[70,-6],[45,-15]]
+        ]
+      },
+      { name: "Yamnaya / Indo-Europeans", color: 0xc87b5c,
+        story: "Ancient DNA studies (Reich Lab, Lazaridis et al.) confirm a massive migration ~3,300–2,500 BCE. Yamnaya pastoralists from the Pontic-Caspian steppe replaced up to 75% of European ancestry in some regions and pushed east into Central and South Asia.",
+        routes: [
+          [[42,48],[32,49],[20,50],[8,50],[-2,52]],
+          [[42,48],[55,42],[68,36],[78,32],[85,28]],
+          [[42,48],[50,40],[58,34],[64,28]]
+        ]
+      },
+      { name: "Proto-Sino-Tibetans", color: 0xa89060,
+        story: "From the upper Yellow River around 4,000 BCE, millet farmers expanded across northern China and southwest into the Himalayan corridor — the ancestors of Han Chinese, Tibetans, and the Burmese.",
+        routes: [
+          [[105,36],[100,32],[95,28],[90,28]],
+          [[105,36],[112,32],[118,28]]
+        ]
+      }
+    ]
+  },
+  {
+    period: "1,000 BCE – 500 CE",
+    name: "Iron, Empire, Diaspora",
+    yearStart: -1000, yearEnd: 500,
+    desc: "Han China expands south, Celts and Germanic peoples spread across Europe, Bantu reach the Limpopo, Lapita Polynesians push to Samoa and Tonga.",
+    duration: 13000,
+    groups: [
+      { name: "Han southward", color: 0xc87b5c,
+        story: "From the Yellow River heartland, Han Chinese pushed south into the Yangtze basin and beyond, absorbing or displacing the indigenous Yue and Bai peoples. By 200 CE, Chinese civilization stretched from the Gobi to northern Vietnam.",
+        routes: [
+          [[112,36],[112,28],[110,22],[108,16],[106,12]],
+          [[112,36],[120,32],[124,28]]
+        ]
+      },
+      { name: "Celts & Germanic peoples", color: 0xa89060,
+        story: "From central European homelands, Celtic peoples spread to the British Isles, Iberia, and Anatolia by 300 BCE; Germanic tribes pushed northward into Scandinavia and later south into the collapsing Roman world.",
+        routes: [
+          [[10,48],[2,50],[-5,52],[-8,54]],
+          [[10,48],[14,52],[18,58],[15,62]],
+          [[10,48],[22,46],[32,44]]
+        ]
+      },
+      { name: "Lapita Polynesians", color: 0x7db3a3,
+        story: "From the Bismarck Archipelago ~1,400 BCE, Lapita-culture voyagers reached Fiji, Samoa, and Tonga by ~900 BCE — the eastern edge of the Polynesian Triangle. They paused here for 1,500 years before the second eastern push.",
+        routes: [
+          [[150,-5],[160,-8],[172,-12],[-178,-15],[-172,-18]]
+        ]
+      },
+      { name: "Sahelian peoples", color: 0xd4a574,
+        story: "Along the southern edge of the Sahara, populations moved between forest and savannah as climate shifted, founding the trans-Saharan trade towns that would later become Djenné, Timbuktu, and Gao.",
+        routes: [ [[-2,14],[8,12],[18,11],[28,12],[32,14]] ]
+      }
+    ]
+  },
+  {
+    period: "500 – 1500 CE",
+    name: "The Middle Passage of Empires",
+    yearStart: 500, yearEnd: 1500,
+    desc: "Arab armies carry Islam from Iberia to the Indus. Vikings reach Vinland. Mongol horsemen build the largest land empire in history. Polynesians find Hawai'i, Rapa Nui, Aotearoa.",
+    duration: 14000,
+    groups: [
+      { name: "Arab expansion", color: 0xd4a574,
+        story: "Within a century of Muhammad's death in 632 CE, Arab armies and traders had carried Islam from al-Andalus to the Indus, founding the largest land empire the world had yet seen.",
+        routes: [
+          [[45,22],[35,25],[20,28],[5,32],[-5,35]],
+          [[45,22],[55,28],[65,30],[72,30]],
+          [[45,22],[42,12],[40,2],[42,-6]]
+        ]
+      },
+      { name: "Vikings", color: 0xa8c8d4,
+        story: "From Scandinavia, Norse seafarers raided, traded, and settled across an extraordinary range — Iceland (~870 CE), Greenland (~985 CE), Newfoundland (L'Anse aux Meadows, ~1000 CE), the British Isles, and the river systems of Russia, where they founded Kievan Rus.",
+        routes: [
+          [[10,60],[-5,63],[-22,65],[-40,64],[-55,55]],
+          [[10,60],[20,58],[30,55],[34,50]]
+        ]
+      },
+      { name: "Mongols", color: 0xc87b5c,
+        story: "Under Genghis Khan and his successors (1206–1294), Mongol cavalry built the largest contiguous land empire in history, from Korea to Hungary. The Pax Mongolica that followed reopened Silk Road trade across Eurasia.",
+        routes: [
+          [[105,48],[88,48],[68,50],[48,52],[28,50]],
+          [[105,48],[115,42],[120,38]],
+          [[105,48],[80,44],[58,40],[42,36]]
+        ]
+      },
+      { name: "Remote Polynesians", color: 0x7db3a3,
+        story: "After the 1,500-year Long Pause, Polynesian voyagers resumed eastward expansion ~700 CE: reaching the Marquesas and Society Islands first, then Hawai'i (~900 CE), Rapa Nui (~1000 CE), and finally Aotearoa / New Zealand (~1200 CE).",
+        routes: [
+          [[-172,-18],[-150,-14],[-145,-10],[-155,20]],
+          [[-172,-18],[-140,-22],[-110,-27]],
+          [[-172,-18],[-178,-30],[176,-42]]
+        ]
+      }
+    ]
+  },
+  {
+    period: "1500 – 1800 CE",
+    name: "Columbian Exchange",
+    yearStart: 1500, yearEnd: 1800,
+    desc: "Atlantic crossings remake every shore. European settlers, twelve million enslaved Africans, and silver-route Asians collide in the Americas.",
+    duration: 14000,
+    groups: [
+      { name: "European settlers", color: 0xc8a165,
+        story: "Spanish, Portuguese, English, French, and Dutch settlers crossed the Atlantic in successive waves — to the Caribbean and Mexico first (1492+), then the eastern seaboard, then the Río de la Plata. Indigenous American populations collapsed by an estimated 80–95% from epidemic disease.",
+        routes: [
+          [[-5,40],[-25,38],[-50,36],[-72,38],[-82,40]],
+          [[-5,40],[-30,28],[-55,18],[-70,15]],
+          [[-5,40],[-20,25],[-38,8],[-50,-12],[-58,-30]]
+        ]
+      },
+      { name: "Enslaved Africans", color: 0x8b6f47,
+        story: "The transatlantic slave trade (Slave Voyages Database: 12.5 million embarked, 10.7 million survived) was the largest forced migration in history. Brazil received ~40%, the Caribbean ~40%, mainland North America ~5%; the rest were dispersed elsewhere in the Atlantic world.",
+        routes: [
+          [[5,5],[-15,8],[-38,12],[-58,16],[-72,20]],
+          [[8,-2],[-12,-4],[-32,-6],[-44,-12],[-46,-22]],
+          [[10,-8],[-8,-6],[-30,-2],[-50,4],[-60,8]]
+        ]
+      },
+      { name: "Iberian Asia route", color: 0xd4a574,
+        story: "Portuguese ships rounded the Cape (1497) and stitched together a chain of trading posts from Mozambique to Macau (1557). The Spanish Manila Galleons (1565–1815) connected Acapulco to the Philippines for 250 years — the first true world economy.",
+        routes: [ [[-8,40],[5,30],[20,15],[40,8],[60,4],[80,4],[100,4],[118,12]] ]
+      }
+    ]
+  },
+  {
+    period: "1800 – 1945 CE",
+    name: "The Long Century of Steerage",
+    yearStart: 1815, yearEnd: 1945,
+    desc: "Steam, rail, and famine launch fifty-five million Europeans across the Atlantic. Indian and Chinese laborers seed plantations from Trinidad to Fiji. Migration becomes industrial.",
+    duration: 14000,
+    groups: [
+      { name: "European emigration", color: 0xc8a165,
+        story: "Between 1815 and 1930, ~55 million Europeans emigrated overseas — Irish escaping famine (1845–52), Italians and Eastern Europeans seeking work, Germans and Britons spreading across the Anglosphere. The U.S., Argentina, Brazil, Canada, and Australia were transformed.",
+        routes: [
+          [[15,52],[-5,52],[-25,50],[-50,45],[-72,42],[-82,40]],
+          [[15,52],[-5,45],[-30,30],[-45,10],[-55,-15],[-62,-35]],
+          [[15,52],[28,48],[45,38],[68,28],[100,10],[125,-15],[145,-30]]
+        ]
+      },
+      { name: "Indian indenture", color: 0xc87b5c,
+        story: "After Britain abolished slavery (1833), plantation owners turned to indentured Indian labour. About 1.5 million Indians were shipped to Trinidad, Guyana, Mauritius, Fiji, South Africa, and Malaya, founding the modern South Asian diaspora.",
+        routes: [
+          [[78,22],[58,12],[38,2],[18,-8],[-2,-12],[-30,-12],[-58,8]],
+          [[78,22],[92,12],[105,2],[115,-8],[135,-18],[155,-18]],
+          [[78,22],[58,2],[42,-12],[28,-22],[22,-30]]
+        ]
+      },
+      { name: "Chinese diaspora", color: 0xb87b5c,
+        story: "Famine, the Taiping war, and the lure of California gold drove millions of southern Chinese — Cantonese, Hakka, Hokkien — to Southeast Asia, the Americas, and the South Pacific. The 'overseas Chinese' became an economic force across the entire Pacific Rim.",
+        routes: [
+          [[114,28],[110,18],[105,8],[100,0],[105,-5]],
+          [[114,28],[140,30],[170,38],[-150,40],[-128,38],[-118,35]],
+          [[114,28],[145,-15],[160,-18],[170,-25],[175,-37]]
+        ]
+      }
+    ]
+  },
+  {
+    period: "1945 – Today",
+    name: "The Age of Migration",
+    yearStart: 1945, yearEnd: 2026,
+    desc: "Decolonization, war, climate, and opportunity move people in numbers without precedent. The Global South enters the North; cities swell; refugees mark the century's borders.",
+    duration: 14000,
+    groups: [
+      { name: "Postcolonial → Europe", color: 0xc8a165,
+        story: "After decolonization, former colonial subjects moved toward the metropole — North and West Africans to France, South Asians and Caribbeans to Britain, Surinamese to the Netherlands, Indonesians to the Hague. Europe became multi-ethnic for the first time.",
+        routes: [
+          [[8,28],[3,36],[2,42],[3,48],[6,52]],
+          [[35,30],[28,36],[20,42],[15,48],[12,52]],
+          [[78,22],[58,30],[42,38],[28,45],[14,50]]
+        ]
+      },
+      { name: "Latin → North America", color: 0xc87b5c,
+        story: "The Bracero programme (1942–64), NAFTA, and Central American civil wars drove decades of northward migration. The U.S. Latino population grew from 4 million in 1950 to over 60 million today — the country's largest minority group.",
+        routes: [
+          [[-100,18],[-105,25],[-100,32],[-95,38],[-90,42]],
+          [[-75,5],[-85,15],[-95,22],[-100,30],[-95,35]],
+          [[-65,-30],[-75,-15],[-85,5],[-92,20],[-95,32]]
+        ]
+      },
+      { name: "Asia-Pacific labour", color: 0x7db3a3,
+        story: "Filipino nurses, Indonesian domestic workers, Bangladeshi construction crews, and Indian engineers move across the Gulf, East Asia, and Australia in numbers unprecedented in human history — often on temporary contracts shaping the global care economy.",
+        routes: [
+          [[121,15],[110,22],[100,25],[78,25],[55,25],[45,25]],
+          [[121,15],[138,25],[150,30],[155,35]],
+          [[121,15],[140,-15],[150,-30],[145,-35]]
+        ]
+      },
+      { name: "Climate & conflict", color: 0xb08070,
+        story: "Wars in Syria, Afghanistan, Sudan, Yemen, and Ukraine — alongside drought in the Sahel and rising seas in the Pacific — have created the largest displaced population since World War II: over 117 million people forced from their homes (UNHCR 2024).",
+        routes: [
+          [[38,12],[42,18],[45,25],[42,32],[36,38],[28,42]],
+          [[68,33],[58,38],[48,40],[36,42],[24,45],[14,48]],
+          [[31,49],[26,50],[20,50],[14,50],[8,50]]
+        ]
+      }
+    ]
+  }
+];
+
+// Reverse-time eras: rewinding modern populations back to their sources.
+// Same migration arcs, but flipped, with a contemporary framing.
+function buildReverseEras() {
+  return ERAS_FORWARD.slice().reverse().map(e => ({
+    ...e,
+    groups: e.groups.map(g => ({
+      ...g,
+      // Reverse each route's coordinate order so dots travel backward
+      routes: g.routes.map(r => r.slice().reverse())
+    }))
+  }));
+}
+
+let directionMode = 'forward'; // 'forward' or 'reverse'
+let ERAS = ERAS_FORWARD;
+
+const container = document.getElementById('globe-container');
+const W = () => window.innerWidth;
+const H = () => window.innerHeight;
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(45, W() / H(), 0.1, 1000);
+camera.position.set(0, 0, 3.2);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+renderer.setSize(W(), H());
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setClearColor(0x000000, 0);
+container.appendChild(renderer.domElement);
+
+scene.add(new THREE.AmbientLight(0xffffff, 0.95));
+const sun = new THREE.DirectionalLight(0xfff5e0, 0.6);
+sun.position.set(5, 3, 5);
+scene.add(sun);
+
+// ============================================================
+// LAND MASK
+// Loads the Earth texture into a hidden canvas, then samples each
+// pixel to build a binary land/water lookup. Used to:
+//   1. Place baseline residing-population dots ONLY on land
+//   2. Snap migration settler clusters to land if a route waypoint
+//      happens to land in open ocean.
+// ============================================================
+const LAND_MASK_W = 1024;
+const LAND_MASK_H = 512;
+let landMask = null; // Uint8Array, 1 = land, 0 = water
+
+function loadLandMask(url) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = LAND_MASK_W;
+        canvas.height = LAND_MASK_H;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, LAND_MASK_W, LAND_MASK_H);
+        const data = ctx.getImageData(0, 0, LAND_MASK_W, LAND_MASK_H).data;
+        const mask = new Uint8Array(LAND_MASK_W * LAND_MASK_H);
+        // Blue Marble: ocean is blue-dominant + dark; land has greens/browns/whites
+        for (let i = 0; i < mask.length; i++) {
+          const r = data[i*4], g = data[i*4+1], b = data[i*4+2];
+          // Land if NOT blue-dominant (or if very bright = ice/clouds also count as land)
+          const blueDominant = (b > r + 8) && (b > g);
+          const veryDark = (r + g + b) < 40; // unrendered ocean
+          mask[i] = (blueDominant || veryDark) ? 0 : 1;
+        }
+        resolve(mask);
+      } catch (e) { reject(e); }
+    };
+    img.onerror = reject;
+    img.src = url;
+  });
+}
+
+// lon: -180..180, lat: -90..90 → 1 if land, 0 if water (or unknown)
+function isLand(lon, lat) {
+  if (!landMask) return 1; // assume land if mask not ready
+  // Equirectangular: x = (lon+180)/360 * W, y = (90-lat)/180 * H
+  const x = Math.floor(((lon + 180) % 360) / 360 * LAND_MASK_W);
+  const y = Math.floor((90 - lat) / 180 * LAND_MASK_H);
+  if (y < 0 || y >= LAND_MASK_H) return 0;
+  const xx = (x + LAND_MASK_W) % LAND_MASK_W;
+  return landMask[y * LAND_MASK_W + xx];
+}
+
+// Find nearest land pixel to (lon, lat) within `maxDeg` degrees.
+// Returns [lon, lat] of nearest land, or original point if none found.
+function findNearestLand(lon, lat, maxDeg = 8) {
+  if (isLand(lon, lat)) return [lon, lat];
+  // Spiral search outward
+  for (let r = 1; r <= maxDeg; r++) {
+    for (let a = 0; a < 360; a += 15) {
+      const rad = a * Math.PI / 180;
+      const tlon = lon + Math.cos(rad) * r;
+      const tlat = lat + Math.sin(rad) * r;
+      if (tlat > 85 || tlat < -85) continue;
+      if (isLand(tlon, tlat)) return [tlon, tlat];
+    }
+  }
+  return [lon, lat]; // give up, return original
+}
+
+const GLOBE_RADIUS = 1.0;
+const earthGeo = new THREE.SphereGeometry(GLOBE_RADIUS, 96, 96);
+const loader = new THREE.TextureLoader();
+loader.crossOrigin = 'anonymous';
+
+let textureLoaded = false;
+let maskLoaded = false;
+function checkAllLoaded() {
+  if (textureLoaded && maskLoaded) {
+    document.getElementById('loading').classList.add('hidden');
+  }
+}
+function markTextureLoaded() {
+  textureLoaded = true;
+  checkAllLoaded();
+}
+
+// Load the same Blue Marble image for both texture AND land mask
+const TEXTURE_URL = 'https://cdn.jsdelivr.net/gh/turban/webgl-earth@master/images/2_no_clouds_4k.jpg';
+const FALLBACK_URL = 'https://unpkg.com/three-globe@2.31.0/example/img/earth-day.jpg';
+
+const earthTexture = loader.load(
+  TEXTURE_URL,
+  markTextureLoaded, undefined,
+  () => loader.load(FALLBACK_URL, markTextureLoaded, undefined, markTextureLoaded)
+);
+earthTexture.colorSpace = THREE.SRGBColorSpace;
+
+// Build the land mask in parallel
+loadLandMask(TEXTURE_URL)
+  .catch(() => loadLandMask(FALLBACK_URL))
+  .then(mask => {
+    landMask = mask;
+    maskLoaded = true;
+    checkAllLoaded();
+    // Once the mask is ready, build the baseline population layer
+    buildBaselinePopulation();
+    // Reset the era so settler clusters can re-snap to land
+    if (typeof startEra === 'function') startEra(animState.eraIndex);
+  })
+  .catch(() => {
+    // Mask failed — proceed without it
+    maskLoaded = true;
+    checkAllLoaded();
+  });
+
+setTimeout(() => {
+  textureLoaded = true;
+  maskLoaded = true;
+  checkAllLoaded();
+}, 6000);
+
+const earthMat = new THREE.MeshStandardMaterial({
+  map: earthTexture, roughness: 0.95, metalness: 0.0
+});
+const earth = new THREE.Mesh(earthGeo, earthMat);
+scene.add(earth);
+
+// Subtle atmosphere — kept very faint so it doesn't read as glow
+const atmoGeo = new THREE.SphereGeometry(GLOBE_RADIUS * 1.018, 64, 64);
+const atmoMat = new THREE.ShaderMaterial({
+  vertexShader: `
+    varying vec3 vNormal;
+    void main() {
+      vNormal = normalize(normalMatrix * normal);
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }`,
+  fragmentShader: `
+    varying vec3 vNormal;
+    void main() {
+      float intensity = pow(0.55 - dot(vNormal, vec3(0,0,1)), 3.0);
+      gl_FragColor = vec4(0.45, 0.62, 0.85, 1.0) * intensity * 0.5;
+    }`,
+  blending: THREE.NormalBlending,
+  side: THREE.BackSide,
+  transparent: true,
+  depthWrite: false
+});
+scene.add(new THREE.Mesh(atmoGeo, atmoMat));
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.rotateSpeed = 0.5;
+controls.zoomSpeed = 0.6;
+controls.enablePan = false;
+controls.minDistance = 1.5;
+controls.maxDistance = 6;
+controls.autoRotate = true;
+controls.autoRotateSpeed = 0.25;
+
+container.addEventListener('mousedown', () => container.classList.add('grabbing'));
+container.addEventListener('mouseup',   () => container.classList.remove('grabbing'));
+
+let userInteracting = false;
+
+controls.addEventListener('start', () => {
+  userInteracting = true;
+  controls.autoRotate = false;
+});
+controls.addEventListener('end', () => {
+  userInteracting = false;
+  setTimeout(() => {
+    if (!userInteracting && focusedGroupId === null) controls.autoRotate = true;
+  }, 4000);
+});
+
+function lonLatToVec3(lon, lat, r = GLOBE_RADIUS) {
+  const phi = (90 - lat) * Math.PI / 180;
+  const theta = (lon + 180) * Math.PI / 180;
+  return new THREE.Vector3(
+    -r * Math.sin(phi) * Math.cos(theta),
+     r * Math.cos(phi),
+     r * Math.sin(phi) * Math.sin(theta)
+  );
+}
+
+// Inverse: convert a vec3 on the unit sphere back to lon/lat
+function vec3ToLonLat(v) {
+  const r = Math.sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
+  const lat = 90 - Math.acos(v.y / r) * 180 / Math.PI;
+  let lon = Math.atan2(v.z, -v.x) * 180 / Math.PI - 180;
+  if (lon < -180) lon += 360;
+  if (lon > 180) lon -= 360;
+  return [lon, lat];
+}
+
+function buildArcSegments(coords, segmentsPerLeg = 32) {
+  const points = [];
+  const waypointIndices = [0];
+  for (let i = 0; i < coords.length - 1; i++) {
+    const a = lonLatToVec3(coords[i][0], coords[i][1], 1);
+    const b = lonLatToVec3(coords[i + 1][0], coords[i + 1][1], 1);
+    const angle = a.angleTo(b);
+    const lift = 1.0 + Math.min(0.14, 0.03 + angle * 0.14);
+    for (let s = 0; s < segmentsPerLeg; s++) {
+      const t = s / segmentsPerLeg;
+      const sinTotal = Math.sin(angle);
+      let p;
+      if (sinTotal < 0.001) p = a.clone().lerp(b, t);
+      else {
+        const wA = Math.sin((1 - t) * angle) / sinTotal;
+        const wB = Math.sin(t * angle) / sinTotal;
+        p = a.clone().multiplyScalar(wA).add(b.clone().multiplyScalar(wB));
+      }
+      const arcLift = Math.sin(t * Math.PI) * (lift - 1);
+      p.normalize().multiplyScalar(1 + arcLift * 0.5);
+      points.push(p);
+    }
+    waypointIndices.push(points.length);
+  }
+  const last = lonLatToVec3(coords[coords.length - 1][0], coords[coords.length - 1][1], 1.001);
+  points.push(last);
+  return { points, waypointIndices };
+}
+
+const arcsLayer = new THREE.Group();
+earth.add(arcsLayer);
+
+// ============================================================
+// BASELINE RESIDING POPULATION
+// A scatter of dots over all habitable land — gives the planet
+// a steady-state populated look so empty areas (deserts, ice caps,
+// oceans) read as truly uninhabited. Density-weighted toward
+// historical population centres (Eurasia, Indian subcontinent, Africa).
+// ============================================================
+const baselineLayer = new THREE.Group();
+earth.add(baselineLayer);
+
+// Density weight bands by latitude — tropics & temperate zones get more dots,
+// polar regions and harsh deserts get fewer.
+function latitudeDensityWeight(lat) {
+  const absLat = Math.abs(lat);
+  if (absLat > 75) return 0.05;      // polar
+  if (absLat > 65) return 0.25;      // sub-arctic
+  if (absLat > 55) return 0.7;
+  if (absLat > 23) return 1.0;       // temperate
+  if (absLat > 15) return 1.1;       // sub-tropics
+  return 0.85;                        // equatorial (rainforest reduces some)
+}
+
+// Major historical population centres — get extra density
+// (rough approximations of pre-industrial demographic concentration)
+const POP_CENTRES = [
+  // Eurasia
+  [78, 25, 2.5],   // Indian subcontinent
+  [114, 30, 2.5],  // Yangtze + Yellow River
+  [113, 23, 1.8],  // Pearl River
+  [105, 12, 1.4],  // Mekong delta
+  [105, 22, 1.2],  // Red River delta
+  [135, 35, 1.5],  // Japan
+  [127, 36, 1.2],  // Korea
+  [44, 33, 1.4],   // Mesopotamia
+  [31, 30, 1.6],   // Nile delta
+  [10, 47, 1.8],   // Central Europe
+  [-2, 52, 1.6],   // British Isles
+  [12, 42, 1.5],   // Italy
+  [3, 40, 1.4],    // Iberia
+  [22, 50, 1.4],   // Eastern Europe
+  [38, 56, 1.3],   // Russia core
+  // Africa
+  [3, 7, 1.4],     // West African coast (Yoruba, etc)
+  [38, 9, 1.3],    // Ethiopian highlands
+  [33, -1, 1.2],   // Lakes region
+  [28, -26, 1.0],  // Southern Africa
+  // Americas
+  [-99, 19, 1.4],  // Mesoamerica
+  [-77, -12, 1.3], // Andes (Inca core)
+  [-46, -23, 1.2], // SE Brazil
+  [-87, 41, 1.3],  // Great Lakes (Native American density was higher than often shown)
+  [-74, 41, 1.2],  // Mid-Atlantic coast
+  [-122, 47, 0.9], // PNW
+  // Other
+  [144, -37, 0.9], // SE Australia
+  [174, -41, 0.7], // NZ
+  [-149, -17, 0.5] // Polynesia
+];
+
+function populationDensityAt(lon, lat) {
+  let density = latitudeDensityWeight(lat);
+  // Boost near major centres
+  for (const [clon, clat, weight] of POP_CENTRES) {
+    let dlon = Math.abs(lon - clon);
+    if (dlon > 180) dlon = 360 - dlon;
+    const dlat = Math.abs(lat - clat);
+    const dist = Math.sqrt(dlon * dlon + dlat * dlat);
+    if (dist < 25) {
+      density += weight * Math.exp(-dist / 8);
+    }
+  }
+  // Suppress harsh desert / tundra centres (Sahara, Empty Quarter, Gobi, Antarctic interior)
+  const deserts = [
+    [15, 22, 8],   // Sahara
+    [50, 22, 5],   // Empty Quarter
+    [105, 42, 6],  // Gobi
+    [70, 40, 4],   // Karakum
+    [-110, 38, 3], // Great Basin
+    [135, -25, 6]  // Australian interior
+  ];
+  for (const [clon, clat, radius] of deserts) {
+    let dlon = Math.abs(lon - clon);
+    if (dlon > 180) dlon = 360 - dlon;
+    const dlat = Math.abs(lat - clat);
+    const dist = Math.sqrt(dlon * dlon + dlat * dlat);
+    if (dist < radius) {
+      density *= 0.15 + 0.85 * (dist / radius);
+    }
+  }
+  return density;
+}
+
+function buildBaselinePopulation() {
+  // Clear any prior baseline
+  while (baselineLayer.children.length > 0) {
+    const c = baselineLayer.children.pop();
+    if (c.geometry) c.geometry.dispose();
+    if (c.material) c.material.dispose();
+  }
+  if (!landMask) return;
+
+  // Sample candidates across the globe in a rough lat-lon grid
+  const TARGET_DOTS = 8000;
+  const positions = [];
+  let attempts = 0;
+  while (positions.length / 3 < TARGET_DOTS && attempts < TARGET_DOTS * 8) {
+    attempts++;
+    // Uniform sphere sampling: pick lat from area-weighted distribution
+    const u = Math.random();
+    const v = Math.random();
+    const lat = 90 - Math.acos(2 * u - 1) * 180 / Math.PI;
+    const lon = v * 360 - 180;
+    if (Math.abs(lat) > 82) continue; // skip extreme polar
+    if (!isLand(lon, lat)) continue;
+    const dens = populationDensityAt(lon, lat);
+    if (Math.random() > dens * 0.4) continue;
+    const v3 = lonLatToVec3(lon, lat, 1.002);
+    positions.push(v3.x, v3.y, v3.z);
+  }
+
+  const posArr = new Float32Array(positions);
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(posArr, 3));
+
+  const mat = new THREE.ShaderMaterial({
+    uniforms: { uOpacity: { value: 0.32 } },
+    vertexShader: `
+      void main() {
+        vec4 mv = modelViewMatrix * vec4(position, 1.0);
+        float scale = clamp(300.0 / -mv.z, 0.85, 1.6);
+        gl_PointSize = 2.2 * scale;
+        gl_Position = projectionMatrix * mv;
+      }`,
+    fragmentShader: `
+      uniform float uOpacity;
+      void main() {
+        vec2 uv = gl_PointCoord - vec2(0.5);
+        float d = length(uv);
+        if (d > 0.5) discard;
+        float a = uOpacity * smoothstep(0.5, 0.4, d);
+        // Warm off-white tone — separates baseline from coloured migration dots
+        gl_FragColor = vec4(0.85, 0.78, 0.62, a);
+      }`,
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.NormalBlending
+  });
+  const points = new THREE.Points(geo, mat);
+  baselineLayer.add(points);
+}
+
+let animState = {
+  eraIndex: 0, startTime: 0,
+  paused: false, pausedAt: 0, pauseAccum: 0
+};
+
+let arcObjects = [];
+let focusedGroupId = null;
+
+const TRAIL_HEAD_LENGTH = 0.08;
+const TRAIL_FADE_LENGTH = 0.35;
+
+// Density model:
+// - Each route has a HOME cluster at the origin (people who stayed)
+// - Settler clusters appear at intermediate waypoints + final destination
+// - A small MOVING stream travels between them
+// All clusters are land-snapped — dots that fall in the ocean are rejected.
+const MOVING_PER_ROUTE = 60;          // visible travellers in transit at any moment
+const HOME_PER_ROUTE = 225;           // 20× smaller than before (was 4500)
+const SETTLERS_PER_WAYPOINT = 60;     // 20× smaller (was 1200)
+const SETTLERS_AT_END = 150;          // 20× smaller (was 3000)
+// Murmuration scatter
+const SWARM_BODY = 0.08;
+const SWARM_PERP_AMP = 0.003;
+
+function makeArcObject(coords, color, groupIdx, routeIdx) {
+  const { points, waypointIndices } = buildArcSegments(coords);
+  const total = points.length;
+
+  // Trail line — flat alpha blending, no glow
+  const positions = new Float32Array(total * 3);
+  const lineColors = new Float32Array(total * 3);
+  const opacities = new Float32Array(total);
+  const c = new THREE.Color(color);
+  for (let i = 0; i < total; i++) {
+    positions[i*3]   = points[i].x;
+    positions[i*3+1] = points[i].y;
+    positions[i*3+2] = points[i].z;
+    lineColors[i*3]   = c.r;
+    lineColors[i*3+1] = c.g;
+    lineColors[i*3+2] = c.b;
+    opacities[i] = 0;
+  }
+  const lineGeo = new THREE.BufferGeometry();
+  lineGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  lineGeo.setAttribute('color',    new THREE.BufferAttribute(lineColors, 3));
+  lineGeo.setAttribute('aOpacity', new THREE.BufferAttribute(opacities, 1));
+
+  const lineMat = new THREE.ShaderMaterial({
+    uniforms: { uGray: { value: 0.0 } },
+    vertexShader: `
+      attribute float aOpacity;
+      varying vec3 vColor;
+      varying float vOpacity;
+      void main() {
+        vColor = color;
+        vOpacity = aOpacity;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }`,
+    fragmentShader: `
+      uniform float uGray;
+      varying vec3 vColor;
+      varying float vOpacity;
+      void main() {
+        if (vOpacity < 0.001) discard;
+        vec3 gray = vec3(0.32, 0.32, 0.32);
+        vec3 col = mix(vColor, gray, uGray);
+        gl_FragColor = vec4(col, vOpacity);
+      }`,
+    vertexColors: true, transparent: true,
+    depthWrite: false,
+    blending: THREE.NormalBlending  // no glow
+  });
+  const line = new THREE.Line(lineGeo, lineMat);
+  arcsLayer.add(line);
+
+  // The flock — tiny dots, no glow, no halo
+  const schoolCount = MOVING_PER_ROUTE;
+  const schoolPositions = new Float32Array(schoolCount * 3);
+  const schoolColors = new Float32Array(schoolCount * 3);
+  const schoolOpacities = new Float32Array(schoolCount);
+  // Murmuration parameters per dot — calm, cohesive drift
+  const dotOffsets = new Float32Array(schoolCount);     // along-route position
+  const dotPhaseA = new Float32Array(schoolCount);
+  const dotAmpA = new Float32Array(schoolCount);
+  const dotFreqA = new Float32Array(schoolCount);
+  const dotBias = new Float32Array(schoolCount);        // static perpendicular offset (per-dot lane)
+
+  for (let i = 0; i < schoolCount; i++) {
+    schoolColors[i*3]   = c.r;
+    schoolColors[i*3+1] = c.g;
+    schoolColors[i*3+2] = c.b;
+    schoolOpacities[i] = 0;
+    // Spread dots across the swarm body — but biased forward (most near the head)
+    dotOffsets[i] = -Math.pow(Math.random(), 1.4) * SWARM_BODY;
+    // Single gentle oscillation; tiny amplitude so the flock holds shape
+    dotPhaseA[i] = Math.random() * Math.PI * 2;
+    dotAmpA[i] = (0.4 + Math.random() * 0.6) * SWARM_PERP_AMP;
+    dotFreqA[i] = 0.3 + Math.random() * 0.4;            // slow, ~0.3-0.7 Hz
+    // Each dot's static perpendicular bias — gives the swarm a stable width
+    dotBias[i] = (Math.random() - 0.5) * SWARM_PERP_AMP * 1.5;
+  }
+
+  const schoolGeo = new THREE.BufferGeometry();
+  schoolGeo.setAttribute('position', new THREE.BufferAttribute(schoolPositions, 3));
+  schoolGeo.setAttribute('color',    new THREE.BufferAttribute(schoolColors, 3));
+  schoolGeo.setAttribute('aOpacity', new THREE.BufferAttribute(schoolOpacities, 1));
+
+  // Hard-edged tiny circles, no soft falloff — reads as plain dots
+  const schoolMat = new THREE.ShaderMaterial({
+    uniforms: { uGray: { value: 0.0 } },
+    vertexShader: `
+      attribute float aOpacity;
+      varying vec3 vColor;
+      varying float vOpacity;
+      void main() {
+        vColor = color;
+        vOpacity = aOpacity;
+        vec4 mv = modelViewMatrix * vec4(position, 1.0);
+        // Murmuration dots — 3.5px nominal, mild zoom scaling
+        float scale = clamp(300.0 / -mv.z, 0.85, 1.6);
+        gl_PointSize = 3.5 * scale;
+        gl_Position = projectionMatrix * mv;
+      }`,
+    fragmentShader: `
+      uniform float uGray;
+      varying vec3 vColor;
+      varying float vOpacity;
+      void main() {
+        if (vOpacity < 0.01) discard;
+        vec2 uv = gl_PointCoord - vec2(0.5);
+        float d = length(uv);
+        if (d > 0.5) discard;
+        vec3 gray = vec3(0.32, 0.32, 0.32);
+        vec3 col = mix(vColor, gray, uGray);
+        float alpha = vOpacity * smoothstep(0.5, 0.45, d);
+        gl_FragColor = vec4(col, alpha);
+      }`,
+    vertexColors: true, transparent: true,
+    depthWrite: false,
+    blending: THREE.NormalBlending  // flat alpha, no glow
+  });
+  const school = new THREE.Points(schoolGeo, schoolMat);
+  arcsLayer.add(school);
+
+  // Helper: create a static cluster of N dots scattered around `centerPoint`
+  // with a given radius (in globe-radius units). Dots that fall in the ocean
+  // are rejected and resampled. The centre is also snapped to nearest land.
+  function makeStaticCluster(centerPoint, count, radius, dotPx) {
+    // Snap the centre point to the nearest land
+    const [origLon, origLat] = vec3ToLonLat(centerPoint);
+    const [snapLon, snapLat] = findNearestLand(origLon, origLat, 6);
+    const snappedCentre = lonLatToVec3(snapLon, snapLat, 1);
+
+    const sPositions = new Float32Array(count * 3);
+    const sColors = new Float32Array(count * 3);
+    const sOpacities = new Float32Array(count);
+
+    const normal = snappedCentre.clone().normalize();
+    const tangentA = new THREE.Vector3();
+    if (Math.abs(normal.y) < 0.9) tangentA.set(0, 1, 0).cross(normal).normalize();
+    else tangentA.set(1, 0, 0).cross(normal).normalize();
+    const tangentB = normal.clone().cross(tangentA).normalize();
+
+    let placed = 0;
+    let maxAttempts = count * 8;
+    while (placed < count && maxAttempts > 0) {
+      maxAttempts--;
+      const r = radius * Math.sqrt(Math.random());
+      const theta = Math.random() * Math.PI * 2;
+      const offX = Math.cos(theta) * r;
+      const offY = Math.sin(theta) * r;
+      const sp = snappedCentre.clone()
+        .add(tangentA.clone().multiplyScalar(offX))
+        .add(tangentB.clone().multiplyScalar(offY));
+      sp.normalize();
+
+      // Land check — only accept if this candidate is on land
+      const [lon, lat] = vec3ToLonLat(sp);
+      if (landMask && !isLand(lon, lat)) continue;
+
+      sp.multiplyScalar(1.003);
+      sPositions[placed*3]   = sp.x;
+      sPositions[placed*3+1] = sp.y;
+      sPositions[placed*3+2] = sp.z;
+      sColors[placed*3]   = c.r;
+      sColors[placed*3+1] = c.g;
+      sColors[placed*3+2] = c.b;
+      sOpacities[placed] = 0;
+      placed++;
+    }
+    // If we couldn't place enough on land, fall back: fill remaining slots
+    // at the snapped centre itself (always on land after snap).
+    while (placed < count) {
+      const sp = snappedCentre.clone().multiplyScalar(1.003);
+      sPositions[placed*3]   = sp.x;
+      sPositions[placed*3+1] = sp.y;
+      sPositions[placed*3+2] = sp.z;
+      sColors[placed*3]   = c.r;
+      sColors[placed*3+1] = c.g;
+      sColors[placed*3+2] = c.b;
+      sOpacities[placed] = 0;
+      placed++;
+    }
+
+    const sGeo = new THREE.BufferGeometry();
+    sGeo.setAttribute('position', new THREE.BufferAttribute(sPositions, 3));
+    sGeo.setAttribute('color',    new THREE.BufferAttribute(sColors, 3));
+    sGeo.setAttribute('aOpacity', new THREE.BufferAttribute(sOpacities, 1));
+
+    const sMat = new THREE.ShaderMaterial({
+      uniforms: { uGray: { value: 0.0 } },
+      vertexShader: `
+        attribute float aOpacity;
+        varying vec3 vColor;
+        varying float vOpacity;
+        void main() {
+          vColor = color;
+          vOpacity = aOpacity;
+          vec4 mv = modelViewMatrix * vec4(position, 1.0);
+          float scale = clamp(300.0 / -mv.z, 0.85, 1.6);
+          gl_PointSize = ${dotPx.toFixed(1)} * scale;
+          gl_Position = projectionMatrix * mv;
+        }`,
+      fragmentShader: `
+        uniform float uGray;
+        varying vec3 vColor;
+        varying float vOpacity;
+        void main() {
+          if (vOpacity < 0.01) discard;
+          vec2 uv = gl_PointCoord - vec2(0.5);
+          float d = length(uv);
+          if (d > 0.5) discard;
+          // Mix toward dark gray when uGray is 1
+          vec3 gray = vec3(0.32, 0.32, 0.32);
+          vec3 col = mix(vColor, gray, uGray);
+          float alpha = vOpacity * smoothstep(0.5, 0.45, d);
+          gl_FragColor = vec4(col, alpha);
+        }`,
+      vertexColors: true, transparent: true,
+      depthWrite: false,
+      blending: THREE.NormalBlending
+    });
+    const mesh = new THREE.Points(sGeo, sMat);
+    arcsLayer.add(mesh);
+    return { mesh, geo: sGeo, mat: sMat, count };
+  }
+
+  // HOME cluster — the population that stayed at the origin (visible from start)
+  // Only the FIRST route in each group creates a full home cluster; later routes
+  // from the same origin add only a small "extra" so we don't pile dots wastefully.
+  const originPoint = points[0];
+  const homeCount = (routeIdx === 0) ? HOME_PER_ROUTE : Math.round(HOME_PER_ROUTE * 0.15);
+  const homeRadius = (routeIdx === 0) ? 0.055 : 0.040;
+  const homeCluster = makeStaticCluster(originPoint, homeCount, homeRadius, 3.5);
+
+  // Settler clusters at intermediate waypoints — appear as the swarm passes
+  const settlerClusters = [];
+  for (let w = 1; w < waypointIndices.length - 1; w++) {
+    const wpIdx = waypointIndices[w];
+    const wpPoint = points[wpIdx];
+    const cluster = makeStaticCluster(wpPoint, SETTLERS_PER_WAYPOINT, 0.030, 3.5);
+    settlerClusters.push({
+      ...cluster,
+      triggerHead: wpIdx / (total - 1),
+      activated: false, activationTime: 0
+    });
+  }
+
+  // Final-destination cluster — appears as migrants arrive
+  const lastIdx = total - 1;
+  const lastPt = points[lastIdx];
+  const finalCluster = makeStaticCluster(lastPt, SETTLERS_AT_END, 0.040, 3.5);
+  const finalSettlers = finalCluster.mesh;
+  const fGeo = finalCluster.geo;
+  const fMat = finalCluster.mat;
+  const finalCount = SETTLERS_AT_END;
+
+  // Click target — sized to match the swarm body
+  const hitGeo = new THREE.SphereGeometry(0.055, 8, 8);
+  const hitMat = new THREE.MeshBasicMaterial({ visible: false });
+  const hit = new THREE.Mesh(hitGeo, hitMat);
+  arcsLayer.add(hit);
+
+  return {
+    line, lineGeo,
+    school, schoolGeo, schoolMat,
+    points, total, waypointIndices,
+    dotOffsets, dotPhaseA, dotAmpA, dotFreqA, dotBias,
+    schoolCount,
+    homeCluster,
+    settlerClusters,
+    finalSettlers, fGeo, fMat, finalSettlerCount: finalCount,
+    hit,
+    color, groupId: groupIdx, routeIdx,
+    delay: groupIdx * 350 + routeIdx * 500 + Math.random() * 600,
+    fullOpacity: 0.30,
+    dimmed: false
+  };
+}
+
+function disposeArcsLayer() {
+  while (arcsLayer.children.length > 0) {
+    const c = arcsLayer.children.pop();
+    if (c.geometry) c.geometry.dispose();
+    if (c.material) c.material.dispose();
+  }
+}
+
+function startEra(idx) {
+  animState.eraIndex = idx;
+  animState.startTime = performance.now();
+  animState.pauseAccum = 0;
+
+  disposeArcsLayer();
+  arcObjects = [];
+
+  const era = ERAS[idx];
+  document.getElementById('era-period').textContent = era.period;
+  document.getElementById('era-counter').textContent =
+    String(idx + 1).padStart(2, '0') + ' / ' + String(ERAS.length).padStart(2, '0');
+  document.getElementById('era-name').innerHTML =
+    era.name.replace(/\b(\w+)$/, '<em>$1</em>');
+  document.getElementById('era-desc').textContent = era.desc;
+
+  buildLegend(era);
+
+  era.groups.forEach((group, gi) => {
+    group.routes.forEach((route, ri) => {
+      arcObjects.push(makeArcObject(route, group.color, gi, ri));
+    });
+  });
+
+  if (focusedGroupId !== null) {
+    if (focusedGroupId >= era.groups.length) clearFocus();
+    else { applyFocus(); updateFocusBanner(); }
+  }
+}
+
+function buildLegend(era) {
+  const legend = document.getElementById('legend');
+  legend.innerHTML = '<div class="legend-title">Peoples in transit</div>';
+  era.groups.forEach((g, i) => {
+    const item = document.createElement('div');
+    let cls = 'legend-item';
+    if (focusedGroupId === null) cls += ' active';
+    else if (focusedGroupId === i) cls += ' active';
+    else cls += ' dim';
+    item.className = cls;
+    const hex = '#' + g.color.toString(16).padStart(6, '0');
+    item.innerHTML = `<span class="legend-dot" style="background:${hex};"></span><span>${g.name}</span>`;
+    item.addEventListener('click', () => {
+      if (focusedGroupId === i) clearFocus();
+      else focusGroup(i);
+    });
+    legend.appendChild(item);
+  });
+}
+
+function focusGroup(gi) {
+  focusedGroupId = gi;
+  controls.autoRotate = false;
+  applyFocus();
+  updateFocusBanner();
+  buildLegend(ERAS[animState.eraIndex]);
+}
+
+function clearFocus() {
+  focusedGroupId = null;
+  applyFocus();
+  updateFocusBanner();
+  buildLegend(ERAS[animState.eraIndex]);
+  document.getElementById('era-desc').textContent = ERAS[animState.eraIndex].desc;
+}
+
+function applyFocus() {
+  arcObjects.forEach(a => {
+    a.dimmed = (focusedGroupId !== null && a.groupId !== focusedGroupId);
+    const grayValue = a.dimmed ? 1.0 : 0.0;
+    // Apply gray to all of this arc's shaders
+    if (a.schoolMat.uniforms && a.schoolMat.uniforms.uGray) {
+      a.schoolMat.uniforms.uGray.value = grayValue;
+    }
+    if (a.line.material.uniforms && a.line.material.uniforms.uGray) {
+      a.line.material.uniforms.uGray.value = grayValue;
+    }
+    if (a.homeCluster.mat.uniforms && a.homeCluster.mat.uniforms.uGray) {
+      a.homeCluster.mat.uniforms.uGray.value = grayValue;
+    }
+    if (a.fMat.uniforms && a.fMat.uniforms.uGray) {
+      a.fMat.uniforms.uGray.value = grayValue;
+    }
+    a.settlerClusters.forEach(sc => {
+      if (sc.mat.uniforms && sc.mat.uniforms.uGray) {
+        sc.mat.uniforms.uGray.value = grayValue;
+      }
+    });
+  });
+}
+
+function updateFocusBanner() {
+  const banner = document.getElementById('focus-banner');
+  if (focusedGroupId === null) { banner.classList.remove('visible'); return; }
+  const g = ERAS[animState.eraIndex].groups[focusedGroupId];
+  if (!g) { banner.classList.remove('visible'); return; }
+  banner.classList.add('visible');
+  document.getElementById('focus-name').textContent = g.name;
+  document.getElementById('focus-dot').style.background = '#' + g.color.toString(16).padStart(6, '0');
+  document.getElementById('era-desc').textContent = g.story || ERAS[animState.eraIndex].desc;
+}
+
+const tooltip = document.getElementById('tooltip');
+const tooltipName = document.getElementById('tooltip-name');
+const raycaster = new THREE.Raycaster();
+const pointer = new THREE.Vector2();
+
+function onPointerMove(e) {
+  pointer.x = (e.clientX / W()) * 2 - 1;
+  pointer.y = -(e.clientY / H()) * 2 + 1;
+  raycaster.setFromCamera(pointer, camera);
+  const hitMeshes = arcObjects.map(a => a.hit);
+  const hits = raycaster.intersectObjects(hitMeshes, false);
+  if (hits.length > 0) {
+    const arc = arcObjects.find(a => a.hit === hits[0].object);
+    if (arc) {
+      const era = ERAS[animState.eraIndex];
+      tooltipName.textContent = era.groups[arc.groupId].name;
+      tooltip.style.left = e.clientX + 'px';
+      tooltip.style.top = e.clientY + 'px';
+      tooltip.classList.add('visible');
+      container.classList.add('hovering');
+      return;
+    }
+  }
+  tooltip.classList.remove('visible');
+  container.classList.remove('hovering');
+}
+
+function onPointerClick(e) {
+  if (e.target !== renderer.domElement) return;
+  raycaster.setFromCamera(pointer, camera);
+  const hitMeshes = arcObjects.map(a => a.hit);
+  const hits = raycaster.intersectObjects(hitMeshes, false);
+  if (hits.length > 0) {
+    const arc = arcObjects.find(a => a.hit === hits[0].object);
+    if (arc) {
+      if (focusedGroupId === arc.groupId) clearFocus();
+      else focusGroup(arc.groupId);
+    }
+  }
+}
+container.addEventListener('pointermove', onPointerMove);
+container.addEventListener('click', onPointerClick);
+
+function formatYear(year) {
+  if (year < 0) {
+    const abs = Math.abs(Math.round(year));
+    return abs.toLocaleString() + ' BCE';
+  }
+  return Math.round(year).toLocaleString() + ' CE';
+}
+
+function tick(now) {
+  requestAnimationFrame(tick);
+
+  if (animState.paused) {
+    controls.update();
+    renderer.render(scene, camera);
+    return;
+  }
+
+  const era = ERAS[animState.eraIndex];
+  const elapsed = now - animState.startTime - animState.pauseAccum;
+  const eraProgress = Math.min(1, elapsed / era.duration);
+  document.getElementById('era-progress').style.width = (eraProgress * 100) + '%';
+
+  // Year ticker — direction-aware
+  let displayYear;
+  let yearProgress = focusedGroupId !== null
+    ? ((now / (era.duration * 0.7)) % 1)
+    : eraProgress;
+
+  if (directionMode === 'forward') {
+    displayYear = era.yearStart + (era.yearEnd - era.yearStart) * yearProgress;
+  } else {
+    // Reverse mode: years count down inside the era
+    displayYear = era.yearEnd - (era.yearEnd - era.yearStart) * yearProgress;
+  }
+  document.getElementById('year-now').textContent = formatYear(displayYear);
+
+  arcObjects.forEach(a => {
+    const arcDuration = era.duration * 0.7;
+    let head;
+    if (focusedGroupId !== null && a.groupId === focusedGroupId) {
+      const cycleDur = arcDuration * 0.9;
+      const cycleT = ((now - a.delay * 0.3) % (cycleDur + 1000)) / cycleDur;
+      head = Math.min(1, Math.max(0, cycleT));
+    } else {
+      const localElapsed = elapsed - a.delay;
+      head = Math.max(0, Math.min(1, localElapsed / arcDuration));
+    }
+
+    // Trail
+    const opacities = a.lineGeo.attributes.aOpacity.array;
+    const targetMax = a.fullOpacity;
+    for (let i = 0; i < a.total; i++) {
+      const segT = i / (a.total - 1);
+      let alpha = 0;
+      if (segT <= head) {
+        const distFromHead = head - segT;
+        if (distFromHead < TRAIL_HEAD_LENGTH) alpha = 1.0;
+        else {
+          const fadeT = (distFromHead - TRAIL_HEAD_LENGTH) / TRAIL_FADE_LENGTH;
+          alpha = Math.max(0, 1 - fadeT);
+        }
+      }
+      opacities[i] = alpha * targetMax;
+    }
+    a.lineGeo.attributes.aOpacity.needsUpdate = true;
+
+    // Tiny flock dots
+    const schoolPos = a.schoolGeo.attributes.position.array;
+    const schoolOps = a.schoolGeo.attributes.aOpacity.array;
+    const dotOpacityBase = 0.65;
+    let leadPoint = null;
+    const tSec = now * 0.001; // seconds
+
+    for (let d = 0; d < a.schoolCount; d++) {
+      const dotHead = head + a.dotOffsets[d];
+      if (dotHead <= 0 || dotHead >= 1) {
+        schoolOps[d] = 0;
+        continue;
+      }
+      const idxF = dotHead * (a.total - 1);
+      const idx = Math.min(a.total - 2, Math.floor(idxF));
+      const frac = idxF - idx;
+      const p0 = a.points[idx];
+      const p1 = a.points[idx + 1];
+      const px = p0.x + (p1.x - p0.x) * frac;
+      const py = p0.y + (p1.y - p0.y) * frac;
+      const pz = p0.z + (p1.z - p0.z) * frac;
+
+      // Surface tangent basis at this point
+      const len = Math.sqrt(px*px + py*py + pz*pz);
+      const ux = px/len, uy = py/len, uz = pz/len;
+      let tx, ty, tz;
+      if (Math.abs(uy) < 0.9) { tx = uz; ty = 0; tz = -ux; }
+      else { tx = 0; ty = uz; tz = -uy; }
+      const tlen = Math.sqrt(tx*tx + ty*ty + tz*tz);
+      tx /= tlen; ty /= tlen; tz /= tlen;
+      const bx = uy*tz - uz*ty, by = uz*tx - ux*tz, bz = ux*ty - uy*tx;
+
+      // Calm cohesive drift: each dot has a fixed perpendicular bias (its lane in the swarm)
+      // plus a single slow oscillation. The flock holds shape and breathes gently.
+      const phaseA = a.dotPhaseA[d] + tSec * a.dotFreqA[d];
+      const ampA = a.dotAmpA[d];
+      const bias = a.dotBias[d];
+
+      const jx = bias + Math.cos(phaseA) * ampA;
+      const jy = Math.sin(phaseA) * ampA;
+
+      const fx = px + tx*jx + bx*jy;
+      const fy = py + ty*jx + by*jy;
+      const fz = pz + tz*jx + bz*jy;
+      const flen = Math.sqrt(fx*fx + fy*fy + fz*fz);
+      const lift = 1.005;
+      schoolPos[d*3]   = fx / flen * lift;
+      schoolPos[d*3+1] = fy / flen * lift;
+      schoolPos[d*3+2] = fz / flen * lift;
+
+      let opacity = dotOpacityBase;
+      if (dotHead < 0.05) opacity *= dotHead / 0.05;
+      if (dotHead > 0.95) opacity *= (1 - dotHead) / 0.05;
+      schoolOps[d] = opacity;
+      if (d === 0) leadPoint = { x: schoolPos[0], y: schoolPos[1], z: schoolPos[2] };
+    }
+    a.schoolGeo.attributes.position.needsUpdate = true;
+    a.schoolGeo.attributes.aOpacity.needsUpdate = true;
+
+    // Hit target uses the deterministic head position on the route
+    // (not jittery dot 0) so clicks always land on the swarm front.
+    if (head > 0 && head < 1) {
+      const hIdx = Math.min(a.total - 1, Math.floor(head * (a.total - 1)));
+      const hPt = a.points[hIdx];
+      a.hit.position.copy(hPt).multiplyScalar(1.005);
+    }
+
+    // HOME cluster — visible from the start of the era (resident population)
+    {
+      const target = 0.55;
+      const hOps = a.homeCluster.geo.attributes.aOpacity.array;
+      // Smooth fade toward target each frame
+      for (let i = 0; i < a.homeCluster.count; i++) {
+        const cur = hOps[i];
+        hOps[i] = cur + (target - cur) * 0.08;
+      }
+      a.homeCluster.geo.attributes.aOpacity.needsUpdate = true;
+    }
+
+    // Settlers at intermediate waypoints
+    a.settlerClusters.forEach(sc => {
+      if (!sc.activated && head >= sc.triggerHead) {
+        sc.activated = true;
+        sc.activationTime = now;
+      }
+      if (sc.activated) {
+        const t = Math.min(1, (now - sc.activationTime) / 1200);
+        const target = 0.65;
+        const sOps = sc.geo.attributes.aOpacity.array;
+        for (let i = 0; i < sc.count; i++) sOps[i] = t * target;
+        sc.geo.attributes.aOpacity.needsUpdate = true;
+      }
+    });
+
+    // Final destination settlers
+    if (head >= 0.92) {
+      const fOps = a.fGeo.attributes.aOpacity.array;
+      const target = 0.70;
+      for (let i = 0; i < a.finalSettlerCount; i++) {
+        fOps[i] = Math.min(target, fOps[i] + 0.015);
+      }
+      a.fGeo.attributes.aOpacity.needsUpdate = true;
+    } else if (focusedGroupId !== null && a.groupId === focusedGroupId && head < 0.05) {
+      // Reset destination + waypoint clusters at start of focus loop
+      const fOps = a.fGeo.attributes.aOpacity.array;
+      for (let i = 0; i < a.finalSettlerCount; i++) fOps[i] = 0;
+      a.fGeo.attributes.aOpacity.needsUpdate = true;
+      a.settlerClusters.forEach(sc => {
+        sc.activated = false;
+        const sOps = sc.geo.attributes.aOpacity.array;
+        for (let i = 0; i < sc.count; i++) sOps[i] = 0;
+        sc.geo.attributes.aOpacity.needsUpdate = true;
+      });
+    }
+  });
+
+  if (elapsed >= era.duration && focusedGroupId === null) nextEra();
+
+  controls.update();
+  renderer.render(scene, camera);
+}
+
+function nextEra() { startEra((animState.eraIndex + 1) % ERAS.length); }
+function prevEra() { startEra((animState.eraIndex - 1 + ERAS.length) % ERAS.length); }
+
+document.getElementById('btn-pause').addEventListener('click', togglePause);
+document.getElementById('btn-next').addEventListener('click', nextEra);
+document.getElementById('btn-prev').addEventListener('click', prevEra);
+document.getElementById('focus-clear').addEventListener('click', clearFocus);
+
+function togglePause() {
+  const btn = document.getElementById('btn-pause');
+  if (!animState.paused) {
+    animState.paused = true;
+    animState.pausedAt = performance.now();
+    btn.innerHTML = '<span class="key">Space</span>Resume';
+  } else {
+    animState.paused = false;
+    animState.pauseAccum += performance.now() - animState.pausedAt;
+    btn.innerHTML = '<span class="key">Space</span>Pause';
+  }
+}
+
+document.addEventListener('keydown', e => {
+  if (e.code === 'Space')      { e.preventDefault(); togglePause(); }
+  if (e.code === 'ArrowRight') nextEra();
+  if (e.code === 'ArrowLeft')  prevEra();
+  if (e.code === 'Escape')     clearFocus();
+});
+
+// Direction toggle — switch between forward and reverse-time arrays
+function setDirection(mode) {
+  if (mode === directionMode) return;
+  directionMode = mode;
+  ERAS = (mode === 'forward') ? ERAS_FORWARD : buildReverseEras();
+  document.getElementById('dir-forward').classList.toggle('active', mode === 'forward');
+  document.getElementById('dir-reverse').classList.toggle('active', mode === 'reverse');
+  // Reset to era 0 of the chosen direction
+  focusedGroupId = null;
+  startEra(0);
+}
+document.getElementById('dir-forward').addEventListener('click', () => setDirection('forward'));
+document.getElementById('dir-reverse').addEventListener('click', () => setDirection('reverse'));
+
+const credToggle = document.getElementById('credits-toggle');
+const credPanel = document.getElementById('credits-panel');
+credToggle.addEventListener('click', e => {
+  e.stopPropagation();
+  credPanel.classList.toggle('open');
+});
+document.addEventListener('click', e => {
+  if (!credPanel.contains(e.target) && e.target !== credToggle) {
+    credPanel.classList.remove('open');
+  }
+});
+
+window.addEventListener('resize', () => {
+  camera.aspect = W() / H();
+  camera.updateProjectionMatrix();
+  renderer.setSize(W(), H());
+});
+
+startEra(0);
+requestAnimationFrame(tick);
+</script>
+</body>
+</html>
